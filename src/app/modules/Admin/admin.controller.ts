@@ -1,13 +1,10 @@
-import { NextFunction, Request, RequestHandler, Response } from "express";
+import { Request, RequestHandler, Response } from "express";
 import catchAsync from "../../../shared/catchAsync";
 import { AdminService } from "./admin.service";
 import httpStatus from "http-status";
 import sendResponse from "../../../shared/sendResponse";
 import pick from "../../../shared/pick";
 import { adminFilterableFields } from "./admin.constant";
-import { Admin, UserStatus } from "@prisma/client";
-import prisma from "../../../shared/prisma";
-import { Transaction } from "mongodb";
 
 const getAllFromDB: RequestHandler = catchAsync(
   async (req: Request, res: Response) => {
@@ -64,43 +61,21 @@ const deleteFromDB = catchAsync(async (req: Request, res: Response) => {
 });
 
 // //Soft Delete
-const softDeleteFromDB = async (id: string): Promise<Admin | null> => {
-  await prisma.admin.findUniqueOrThrow({
-    where: {
-      id,
-      isDeleted: false,
-    },
+const softDeleteFromDB = catchAsync(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const result = await AdminService.softDeleteFromDB(id);
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Admin data deleted!",
+    data: result,
   });
+});
 
-  const result = await prisma.$transaction(async (transactionClient) => {
-    const adminDeletedData = await transactionClient.admin.update({
-      where: {
-        id,
-      },
-      data: {
-        isDeleted: true,
-      
-      },
-    });
-
-    await transactionClient.user.update({
-      where: {
-        email: adminDeletedData.email,
-      },
-      data: {
-        status: UserStatus.DELETED,
-      },
-    });
-
-    return adminDeletedData;
-  });
-
-  return result;
-};
 export const AdminController = {
   getAllFromDB,
   getByIdFromDB,
   updateIntoDB,
   deleteFromDB,
-  softDeleteFromDB
+  softDeleteFromDB,
 };

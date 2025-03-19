@@ -21,7 +21,7 @@ const createAdmin = async (data: any) => {
     return createAdminData;
   });
 
-  console.log("object azir", userData);
+  // console.log("object azir", userData);
   return result;
 };
 
